@@ -36,7 +36,8 @@ func LoadConfig() {
 	port := getEnvWithDefault("PORT", "8090")
 	bindAddr := os.Getenv("BIND_ADDR") // e.g. the Tailscale IP; empty listens on all interfaces
 
-	exercisesJSON := getEnvWithDefault("EXERCISES_JSON_PATH", "exercises.json")
+	// Empty means "use the exercise list built into the binary".
+	exercisesJSON := os.Getenv("EXERCISES_JSON_PATH")
 
 	// Do not use hardcoded defaults; rely on DB resolution at startup.
 	// If provided explicitly via env, they will be used initially and overridden by DB lookups.

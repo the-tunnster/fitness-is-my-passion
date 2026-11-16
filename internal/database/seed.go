@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"io/fs"
@@ -16,6 +17,20 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
+
+// defaultExercises is the built-in exercise list, so the binary needs no file next to it.
+//
+//go:embed exercises.json
+var defaultExercises []byte
+
+// exercisesJSON returns the exercise data to seed from: the file at path when
+// EXERCISES_JSON_PATH is set, otherwise the embedded list.
+func exercisesJSON(path string) ([]byte, error) {
+	if path == "" {
+		return defaultExercises, nil
+	}
+	return os.ReadFile(path)
+}
 
 // EnsureExercisesSeeded checks the exercises collection and, if empty,
 // populates it from exercises.json. Safe to run on startup.
@@ -32,13 +47,17 @@ func EnsureExercisesSeeded(ctx context.Context, db *mongo.Database) error {
 	}
 
 	path := config.AppConfig.ExercisesJSONPath
-	log.Printf("Seeding exercises from %s...", path)
+	if path == "" {
+		log.Println("Seeding exercises from the built-in list...")
+	} else {
+		log.Printf("Seeding exercises from %s...", path)
+	}
 	inserted, err := SeedExercisesFromJSON(ctx, db, path)
 	if err != nil {
 		return err
 	}
 	if inserted > 0 {
-		log.Printf("Inserted %d exercises from %s", inserted, path)
+		log.Printf("Inserted %d exercises", inserted)
 	}
 
 	// Ensure Warm-Up and Cool-Down exist even if not present in the JSON
@@ -48,10 +67,10 @@ func EnsureExercisesSeeded(ctx context.Context, db *mongo.Database) error {
 	return ensureWarmupCooldownDefaults(ctx, exercises)
 }
 
-// SeedExercisesFromJSON reads exercises from a JSON file and inserts them
-// into the exercises collection. Returns true if any records were inserted.
+// SeedExercisesFromJSON reads exercises from a JSON file (or the embedded list when path
+// is empty) and inserts them into the exercises collection. Returns how many were inserted.
 func SeedExercisesFromJSON(ctx context.Context, db *mongo.Database, path string) (int, error) {
-	data, err := os.ReadFile(path)
+	data, err := exercisesJSON(path)
 	if err != nil {
 		// If file doesn't exist, treat as non-fatal and return false
 		if errors.Is(err, fs.ErrNotExist) {
