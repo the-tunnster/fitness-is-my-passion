@@ -404,80 +404,10 @@ func GetWorkoutComparisonHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	workout1 := workouts[0] // Latest workout
-	workout2 := workouts[1] // Second latest workout
-
-	type MetricChange struct {
-		ExerciseName string  `json:"exercise_name"`
-		Variation    string  `json:"variation"`
-		MaxWeight    float64 `json:"max_weight"`
-		TotalReps    int     `json:"reps"`
-		TotalVolume  float64 `json:"volume"`
-		WeightChange float64 `json:"weight_change"`
-		RepsChange   int     `json:"reps_change"`
-		VolumeChange float64 `json:"volume_change"`
-	}
-
-	exerciseMetricMap := make(map[string]MetricChange)
-
-	for _, exercise := range workout1.Exercises {
-		exercise_name, _ := database.GetExerciseName(exercise.ExerciseID)
-		key := exercise_name + "|" + exercise.Variation
-
-		max_weight, total_reps, total_volume := 0.0, 0, 0.0
-
-		for _, set := range exercise.Sets {
-			total_reps += set.Reps
-			total_volume += float64(set.Reps) * set.Weight
-
-			if set.Weight > max_weight {
-				max_weight = set.Weight
-			}
-		}
-
-		exerciseMetricMap[key] = MetricChange{
-			ExerciseName: exercise_name,
-			Variation:    exercise.Variation,
-			MaxWeight:    max_weight,
-			TotalReps:    total_reps,
-			TotalVolume:  total_volume,
-			WeightChange: max_weight,
-			RepsChange:   total_reps,
-			VolumeChange: total_volume,
-		}
-	}
-
-	for _, exercise := range workout2.Exercises {
-		exercise_name, _ := database.GetExerciseName(exercise.ExerciseID)
-		key := exercise_name + "|" + exercise.Variation
-
-		max_weight, total_reps, total_volume := 0.0, 0, 0.0
-
-		for _, set := range exercise.Sets {
-			total_reps += set.Reps
-			total_volume += float64(set.Reps) * set.Weight
-
-			if set.Weight > max_weight {
-				max_weight = set.Weight
-			}
-		}
-
-		last_workout_metrics, ok := exerciseMetricMap[key]
-		if !ok {
-			continue
-		}
-
-		last_workout_metrics.RepsChange = last_workout_metrics.TotalReps - total_reps
-		last_workout_metrics.WeightChange = last_workout_metrics.MaxWeight - max_weight
-		last_workout_metrics.VolumeChange = last_workout_metrics.TotalVolume - total_volume
-
-		exerciseMetricMap[key] = last_workout_metrics
-	}
-
-	changes := make([]MetricChange, 0, len(exerciseMetricMap))
-	for _, metrics := range exerciseMetricMap {
-		changes = append(changes, metrics)
-	}
+	changes := compareWorkouts(workouts[0], workouts[1], func(id primitive.ObjectID) string {
+		name, _ := database.GetExerciseName(id)
+		return name
+	})
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(changes)
