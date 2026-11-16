@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strings"
 
-	"fitness/internal/api"
+	"fitness-tracker/internal/api"
 )
 
 //go:embed templates static

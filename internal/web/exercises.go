@@ -1,12 +1,12 @@
-package main
+package web
 
 import (
 	"log"
 	"net/http"
 	"strings"
 
-	"fitness/internal/api"
-	"fitness/internal/ui"
+	"fitness-tracker/internal/api"
+	"fitness-tracker/internal/ui"
 )
 
 // splitLines mirrors the Streamlit parsing: one trimmed, non-empty item per line.

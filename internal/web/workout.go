@@ -1,4 +1,4 @@
-package main
+package web
 
 import (
 	"errors"
@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"fitness/internal/api"
-	"fitness/internal/live"
-	"fitness/internal/ui"
+	"fitness-tracker/internal/api"
+	"fitness-tracker/internal/live"
+	"fitness-tracker/internal/ui"
 )
 
 type workoutMsg struct{ Success, Error, Warning string }

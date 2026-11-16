@@ -1,4 +1,4 @@
-package main
+package web
 
 import (
 	"encoding/json"
@@ -6,8 +6,8 @@ import (
 	"log"
 	"net/http"
 
-	"fitness/internal/api"
-	"fitness/internal/ui"
+	"fitness-tracker/internal/api"
+	"fitness-tracker/internal/ui"
 )
 
 // metric formats a stat the way Streamlit's st.metric does: the delta is shown to two

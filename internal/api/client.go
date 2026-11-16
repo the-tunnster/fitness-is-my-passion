@@ -40,10 +40,12 @@ func (c *Client) UserID() (string, error) {
 	return c.userID, nil
 }
 
-func NewClient() *Client {
+// NewClient returns a client for the JSON API at defaultBase. BACKEND_URL overrides it,
+// e.g. to run the UI against a backend on another machine.
+func NewClient(defaultBase string) *Client {
 	base := os.Getenv("BACKEND_URL")
 	if base == "" {
-		base = "http://opi5:8090"
+		base = defaultBase
 	}
 	return &Client{
 		BaseURL: strings.TrimRight(base, "/"),

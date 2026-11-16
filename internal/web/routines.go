@@ -1,4 +1,4 @@
-package main
+package web
 
 import (
 	"log"
@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"fitness/internal/api"
-	"fitness/internal/ui"
+	"fitness-tracker/internal/api"
+	"fitness-tracker/internal/ui"
 )
 
 const backendDown = "Couldn't reach the backend."

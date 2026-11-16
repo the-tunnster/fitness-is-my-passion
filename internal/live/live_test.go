@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"fitness/internal/api"
+	"fitness-tracker/internal/api"
 )
 
 // fakeBackend implements just the endpoints the live session uses.

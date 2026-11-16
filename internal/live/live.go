@@ -15,7 +15,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"fitness/internal/api"
+	"fitness-tracker/internal/api"
 )
 
 var (

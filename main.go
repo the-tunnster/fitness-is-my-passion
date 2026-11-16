@@ -5,11 +5,12 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 
-	"fitness/internal/api"
-	"fitness/internal/live"
-	"fitness/internal/ui"
+	"fitness-tracker/internal/api"
+	"fitness-tracker/internal/config"
+	"fitness-tracker/internal/database"
+	"fitness-tracker/internal/routes"
+	"fitness-tracker/internal/web"
 )
 
 // sessionFile is where the live workout session is kept; mount it as a volume when
@@ -21,79 +22,32 @@ func sessionFile() string {
 	return filepath.Join("data", "live-session.json")
 }
 
+// apiBaseURL is where the UI reaches the JSON API served by this same process.
+// If BIND_ADDR restricts the listener to one interface, loopback wouldn't work, so use it.
+func apiBaseURL() string {
+	host := config.AppConfig.BindAddr
+	if host == "" || host == "0.0.0.0" {
+		host = "127.0.0.1"
+	}
+	return "http://" + host + ":" + config.AppConfig.Port + "/api"
+}
+
 func main() {
-	tpl, err := ui.ParseTemplates("home.html", "profile.html", "exercise_manage.html", "exercise_create.html", "routine_manage.html", "routine_create.html", "workout.html", "post_workout.html", "history.html")
-	if err != nil {
+	log.Println("Loading app config...")
+	config.LoadConfig()
+
+	log.Println("Initialising database connection...")
+	database.InitMongo()
+
+	log.Println("Registering routes and multiplexer...")
+	mux := http.NewServeMux()
+	routes.RegisterRoutes(mux)
+
+	if err := web.Register(mux, api.NewClient(apiBaseURL()), sessionFile()); err != nil {
 		log.Fatal(err)
 	}
-	client := api.NewClient()
 
-	mux := http.NewServeMux()
-	mux.Handle("GET /static/", ui.StaticHandler())
-	registerExercises(mux, tpl, client)
-	registerRoutines(mux, tpl, client)
-	registerWorkout(mux, tpl, client, live.New(client, sessionFile()))
-		registerAnalytics(mux, tpl, client)
-
-	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
-		data := ui.PageData{Title: "Home"}
-		user, err := client.Me()
-		if err != nil {
-			log.Println(err)
-			data.Error = backendDown
-		} else {
-			data.Username = user.Username
-		}
-		tpl.Render(w, r, "home.html", data)
-	})
-
-	showProfile := func(w http.ResponseWriter, r *http.Request, success string) {
-		data := ui.PageData{Title: "Profile Management.", Success: success}
-		user, err := client.Me()
-		if err != nil {
-			log.Println(err)
-			data.Error = "Couldn't reach the backend."
-		}
-		data.User = user
-		tpl.Render(w, r, "profile.html", data)
-	}
-	mux.HandleFunc("GET /profile", func(w http.ResponseWriter, r *http.Request) {
-		showProfile(w, r, "")
-	})
-	mux.HandleFunc("POST /profile", func(w http.ResponseWriter, r *http.Request) {
-		if err := r.ParseForm(); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		height, _ := strconv.ParseFloat(r.FormValue("height"), 64)
-		weight, _ := strconv.ParseFloat(r.FormValue("weight"), 64)
-		userID := r.FormValue("user_id")
-		err := client.UpdateUser(userID, api.User{
-			Username:       r.FormValue("username"),
-			Gender:         r.FormValue("gender"),
-			DateOfBirth:    r.FormValue("date_of_birth"),
-			Height:         height,
-			Weight:         weight,
-			UnitPreference: r.FormValue("unit_preference"),
-		})
-		if err != nil {
-			log.Println(err)
-			data := ui.PageData{Title: "Profile Management.", Error: "Couldn't update profile..."}
-			data.User = &api.User{
-				ID: userID, Username: r.FormValue("username"), Gender: r.FormValue("gender"),
-				DateOfBirth: r.FormValue("date_of_birth"), Height: height, Weight: weight,
-				UnitPreference: r.FormValue("unit_preference"),
-			}
-			tpl.Render(w, r, "profile.html", data)
-			return
-		}
-		showProfile(w, r, "Updated user profile!")
-	})
-
-	addr := ":" + os.Getenv("PORT")
-	if addr == ":" {
-		addr = ":8080"
-	}
-	log.Println("listening on " + addr)
+	addr := config.AppConfig.BindAddr + ":" + config.AppConfig.Port
+	log.Printf("Server running on %s", addr)
 	log.Fatal(http.ListenAndServe(addr, mux))
 }
