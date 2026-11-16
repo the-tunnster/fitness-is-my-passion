@@ -63,11 +63,23 @@ func UpdateUserHandler(w http.ResponseWriter, r *http.Request) {
 	utils.JSONResponse(w, http.StatusNoContent, nil)
 }
 
+// exerciseUpdates keeps only the fields of an exercise that may be edited, so stray keys
+// (such as the "id" clients send along) never reach the database.
+func exerciseUpdates(incoming map[string]interface{}) bson.M {
+	updates := bson.M{}
+	for _, field := range []string{"name", "category", "variations", "equipment"} {
+		if v, ok := incoming[field]; ok {
+			updates[field] = v
+		}
+	}
+	return updates
+}
+
 func UpdateExerciseHandler(w http.ResponseWriter, r *http.Request) {
 	exerciseID := r.URL.Query().Get("exercise_id")
 
 	if exerciseID == "" {
-		utils.ErrorResponse(w, http.StatusBadRequest, "Missing user_id or routine_id")
+		utils.ErrorResponse(w, http.StatusBadRequest, "Missing exercise_id")
 		return
 	}
 
@@ -77,12 +89,17 @@ func UpdateExerciseHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var updates bson.M
-	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
+	var incoming map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&incoming); err != nil {
 		utils.ErrorResponse(w, http.StatusBadRequest, "Invalid JSON body")
 		return
 	}
 
+	updates := exerciseUpdates(incoming)
+	if len(updates) == 0 {
+		utils.ErrorResponse(w, http.StatusBadRequest, "No editable exercise fields provided")
+		return
+	}
 	updates["updatedAt"] = time.Now()
 
 	err = database.UpdateExercise(exerciseObjID, updates)
