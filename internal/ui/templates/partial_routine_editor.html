@@ -1,0 +1,27 @@
+{{define "routine_row"}}
+<div class="rt-row">
+  <span class="rt-handle material-symbols-rounded" aria-label="Drag to reorder" title="Drag to reorder">drag_indicator</span>
+  <select name="ex_name" aria-label="Exercise">
+    {{$name := .Row.Name}}
+    {{range .Names}}<option value="{{.}}" {{if eq . $name}}selected{{end}}>{{.}}</option>{{end}}
+  </select>
+  <input type="number" name="ex_sets" min="1" inputmode="numeric" value="{{.Row.Sets}}" aria-label="Sets">
+  <input type="number" name="ex_reps" min="1" inputmode="numeric" value="{{.Row.Reps}}" aria-label="Reps">
+  <button type="button" class="rt-remove" data-rt-remove aria-label="Remove exercise" title="Remove exercise">
+    <span class="material-symbols-rounded">close</span>
+  </button>
+</div>
+{{end}}
+
+{{define "routine_editor"}}
+<div class="rt-row rt-head"><span></span><span>Exercise Name</span><span>Sets</span><span>Reps</span><span></span></div>
+<div class="rt-list">
+  {{range .Rows}}{{template "routine_row" (rowData $.ExerciseNames .)}}{{end}}
+</div>
+<template class="rt-template">{{template "routine_row" (rowData .ExerciseNames (newRow .ExerciseNames))}}</template>
+<hr>
+<div class="rt-actions">
+  <button type="button" class="btn" data-rt-add><span class="material-symbols-rounded">add</span>Add</button>
+  <button type="button" class="btn" hx-post="{{.Action}}"><span class="material-symbols-rounded">save</span>Save</button>
+</div>
+{{end}}

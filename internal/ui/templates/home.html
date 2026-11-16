@@ -1,0 +1,18 @@
+{{define "content"}}
+{{if .Error}}
+<h1>Welcome!</h1>
+<div class="alert error">{{.Error}}</div>
+{{else}}
+<h1>Welcome, {{.Username}}!</h1>
+<p>
+  The app is in early development. Some things may be broken, and some might be confusing.<br>
+  For now though, jump right in!<br>
+</p>
+<a class="page-link" href="/workout" hx-get="/workout" hx-target="#content" hx-push-url="true">
+  <span class="material-symbols-rounded">exercise</span>Record a Session
+</a>
+<a class="page-link" href="/profile" hx-get="/profile" hx-target="#content" hx-push-url="true">
+  <span class="material-symbols-rounded">account_box</span>Account Management
+</a>
+{{end}}
+{{end}}

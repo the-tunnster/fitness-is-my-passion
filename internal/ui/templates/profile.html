@@ -1,0 +1,53 @@
+{{define "content"}}
+<h1>Profile Management.</h1>
+<p>
+  This is your user profile page.<br>
+  Feel free to leave these values as they are, they're just defaults.<br>
+  However, if you wish to update these, try to have them as accurate as possible.<br>
+</p>
+
+{{if .Error}}<div class="alert error">{{.Error}}</div>{{end}}
+{{if .Success}}<div class="alert success">{{.Success}}</div>{{end}}
+
+{{with .User}}
+<form class="card" hx-post="/profile" hx-target="#content" hx-disable-elt="find button">
+  <input type="hidden" name="user_id" value="{{.ID}}">
+
+  <label class="field">user_name
+    <input type="text" name="username" value="{{.Username}}" required>
+  </label>
+
+  <label class="field">gender
+    <select name="gender">
+      <option value="male" {{if eq .Gender "male"}}selected{{end}}>male</option>
+      <option value="female" {{if ne .Gender "male"}}selected{{end}}>female</option>
+    </select>
+  </label>
+
+  <label class="field">date_of_birth
+    <input type="date" name="date_of_birth" value="{{dateOnly .DateOfBirth}}" required>
+  </label>
+
+  <label class="field">height
+    <input type="number" name="height" value="{{.Height}}" step="0.01">
+  </label>
+
+  <label class="field">weight
+    <input type="number" name="weight" value="{{.Weight}}" step="0.01">
+  </label>
+
+  <label class="field">unit_preference
+    <select name="unit_preference">
+      <option value="metric" {{if eq .UnitPreference "metric"}}selected{{end}}>metric</option>
+      <option value="freedom" {{if ne .UnitPreference "metric"}}selected{{end}}>freedom</option>
+    </select>
+  </label>
+
+  <label class="field">user_id
+    <input type="text" value="{{.ID}}" disabled>
+  </label>
+
+  <button type="submit" class="btn">Update Information</button>
+</form>
+{{end}}
+{{end}}

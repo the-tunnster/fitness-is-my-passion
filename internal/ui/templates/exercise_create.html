@@ -1,0 +1,47 @@
+{{define "content"}}
+<h1>Exercise Creator</h1>
+<p>
+  Create a new exercise with its details, variations, and equipment options.<br>
+  Think twice before you add something stupid.<br>
+</p>
+
+{{if .Error}}<div class="alert error">{{.Error}}</div>{{end}}
+
+{{$e := .Exercise}}
+<form class="plain" hx-post="/exercises/create" hx-target="#content" hx-disable-elt="find button">
+  <input type="text" name="name" class="text" placeholder="Enter the name of the new exercise"
+         aria-label="Exercise Name" {{if $e}}value="{{$e.Name}}"{{end}}>
+
+  <label class="field">Category
+    <select name="category">
+      {{range .Categories}}<option value="{{.}}" {{if and $e (eq . $e.Category)}}selected{{end}}>{{.}}</option>{{end}}
+    </select>
+  </label>
+
+  <div class="field"><strong>Exercise Variations</strong> (one per line)
+    <textarea name="variations" rows="6" aria-label="Variations"
+      placeholder="Enter each variation on a new line&#10;Example:&#10;Standard&#10;Wide grip&#10;Narrow grip">{{if $e}}{{join $e.Variations}}{{end}}</textarea>
+  </div>
+
+  <div class="field"><strong>Equipment Required</strong> (one per line)
+    <textarea name="equipment" rows="6" aria-label="Equipment"
+      placeholder="Enter each piece of equipment on a new line&#10;Example:&#10;Barbell&#10;Dumbbells&#10;Bench">{{if $e}}{{join $e.Equipment}}{{end}}</textarea>
+  </div>
+
+  <button type="submit" class="btn wide"><span class="material-symbols-rounded">add</span>Create Exercise</button>
+</form>
+
+<details class="expander">
+  <summary>Category Guidelines</summary>
+  <p><strong>Strength</strong>: Exercises that focus on building muscle strength and power</p>
+  <ul><li>Examples: Squats, Deadlifts, Bench Press, Pull-ups</li></ul>
+  <p><strong>Flexibility</strong>: Exercises that improve range of motion and flexibility</p>
+  <ul><li>Examples: Stretches, Yoga poses, Mobility work</li></ul>
+  <p><strong>Stability</strong>: Exercises that improve balance and core stability</p>
+  <ul><li>Examples: Planks, Single-leg stands, Balance board exercises</li></ul>
+  <p><strong>Endurance</strong>: Exercises that improve cardiovascular or muscular endurance</p>
+  <ul><li>Examples: Running, Cycling, High-rep bodyweight exercises</li></ul>
+  <p><strong>Functional</strong>: Exercises that mimic real-world movement patterns</p>
+  <ul><li>Examples: Farmer's walks, Turkish get-ups, Movement patterns</li></ul>
+</details>
+{{end}}

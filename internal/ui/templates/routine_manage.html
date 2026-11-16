@@ -1,0 +1,41 @@
+{{define "content"}}
+<h1>Routine Management</h1>
+
+{{if .Error}}<div class="alert error">{{.Error}}</div>{{end}}
+{{if .Success}}<div class="alert success">{{.Success}}</div>{{end}}
+
+{{if .Info}}
+<div class="alert info">{{.Info}}</div>
+{{else}}
+<form class="narrow" hx-get="/routines/manage" hx-target="#content" hx-push-url="true" hx-trigger="change">
+  <label class="field">Select Routine
+    <select name="routine" class="select">
+      <option value="">None</option>
+      {{range .Routines}}<option value="{{.ID}}" {{if eq .ID $.RoutineID}}selected{{end}}>{{.Name}}</option>{{end}}
+    </select>
+  </label>
+</form>
+
+{{if .RoutineID}}
+<p class="caption">Drag <span class="material-symbols-rounded">drag_indicator</span> to reorder. Use <span class="material-symbols-rounded">close</span> to drop an exercise.</p>
+<hr>
+<form class="rt-form" onsubmit="return false" hx-target="#content">
+  <input type="hidden" name="routine_id" value="{{.RoutineID}}">
+  {{template "routine_editor" .}}
+</form>
+
+<details class="expander">
+  <summary><span class="material-symbols-rounded">delete</span> Delete This Routine</summary>
+  <div class="alert warning">This action is technically reversible, but it is a hassle to re-create a whole new routine.</div>
+  <form class="plain" hx-post="/routines/delete" hx-target="#content">
+    <input type="hidden" name="routine_id" value="{{.RoutineID}}">
+    <label class="check">
+      <input type="checkbox" onchange="this.form.querySelector('button').disabled = !this.checked">
+      I understand and want to delete this routine
+    </label>
+    <button type="submit" class="btn danger" disabled>Delete Routine</button>
+  </form>
+</details>
+{{end}}
+{{end}}
+{{end}}

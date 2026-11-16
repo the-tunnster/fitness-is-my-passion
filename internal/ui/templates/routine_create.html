@@ -1,0 +1,14 @@
+{{define "content"}}
+<h1>Routine Creation</h1>
+<hr>
+
+{{if .Error}}<div class="alert error">{{.Error}}</div>{{end}}
+
+<form class="rt-form" onsubmit="return false" hx-target="#content">
+  <input type="text" name="name" class="text" placeholder="Routine Name" aria-label="Routine Name" value="{{.RoutineName}}">
+  {{template "routine_editor" .}}
+</form>
+
+<hr>
+<button type="button" class="btn" hx-get="/routines/create" hx-target="#content">Clear All</button>
+{{end}}

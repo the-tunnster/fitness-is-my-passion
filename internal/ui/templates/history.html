@@ -1,0 +1,27 @@
+{{define "content"}}
+<h1>Historical Workout Analytics</h1>
+
+{{if .Mock}}<div class="alert warning">Showing generated demo data (MOCK_ANALYTICS=1), not your workouts.</div>{{end}}
+{{if .Error}}<div class="alert error">{{.Error}}</div>{{end}}
+
+<p>Select an exercise to view your progress.</p>
+
+{{if .Info}}
+<div class="alert info">{{.Info}}</div>
+{{else}}
+<form class="narrow" hx-get="/history" hx-target="#content" hx-push-url="true" hx-trigger="change">
+  <select name="exercise" class="select" aria-label="Select an exercise to view its history">
+    <option value="">None</option>
+    {{range .Exercises}}<option value="{{.ID}}" {{if eq .ID $.Selected}}selected{{end}}>{{.Name}}</option>{{end}}
+  </select>
+</form>
+
+{{if .Notice}}<div class="alert info">{{.Notice}}</div>{{end}}
+
+{{if .ChartJSON}}
+<div class="chart-box">
+  <canvas data-chart="history" data-points="{{.ChartJSON}}" aria-label="Max weight and volume over time" role="img"></canvas>
+</div>
+{{end}}
+{{end}}
+{{end}}

@@ -1,0 +1,38 @@
+{{define "content"}}
+<h1>Post Workout Analytics</h1>
+
+{{if .Mock}}<div class="alert warning">Showing generated demo data (MOCK_ANALYTICS=1), not your workouts.</div>{{end}}
+{{if .Error}}<div class="alert error">{{.Error}}</div>{{end}}
+
+<p>Select a workout routine to get started.</p>
+
+{{if .Info}}
+<div class="alert info">{{.Info}}</div>
+{{else}}
+<form class="narrow" hx-get="/workout/analytics" hx-target="#content" hx-push-url="true" hx-trigger="change">
+  <select name="routine" class="select" aria-label="Select a routine">
+    <option value="">None</option>
+    {{range .Routines}}<option value="{{.ID}}" {{if eq .ID $.Selected}}selected{{end}}>{{.Name}}</option>{{end}}
+  </select>
+</form>
+
+{{if .Notice}}<div class="alert info">{{.Notice}}</div>{{end}}
+
+{{range .Metrics}}
+<h2>{{.Title}}</h2>
+<div class="cols3">
+  {{range .Metrics}}
+  <div class="metric">
+    <div class="metric-label">{{.Label}}</div>
+    <div class="metric-value">{{.Value}}</div>
+    {{if .Delta}}
+    <div class="metric-delta {{.Dir}}">
+      <span class="material-symbols-rounded">{{if eq .Dir "up"}}arrow_upward{{else}}arrow_downward{{end}}</span>{{.Delta}}
+    </div>
+    {{end}}
+  </div>
+  {{end}}
+</div>
+{{end}}
+{{end}}
+{{end}}

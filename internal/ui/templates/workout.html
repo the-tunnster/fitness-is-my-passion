@@ -1,0 +1,103 @@
+{{define "content"}}
+<h1>Workout Recorder</h1>
+
+{{if .Error}}<div class="alert error">{{.Error}}</div>{{end}}
+{{if .Warning}}<div class="alert warning">{{.Warning}}</div>{{end}}
+{{if .Success}}<div class="alert success">{{.Success}}</div>{{end}}
+
+{{if .Info}}
+<div class="alert info">{{.Info}}</div>
+{{else if .Workout}}
+{{with .Workout}}
+{{if not .Active}}
+<p>Select a workout routine to get started.</p>
+<form class="plain" hx-post="/workout/start" hx-target="#content">
+  <select name="routine_id" class="select" aria-label="Select a routine"
+          onchange="this.form.querySelector('button').disabled = !this.value">
+    <option value="">None</option>
+    {{range .Routines}}<option value="{{.ID}}">{{.Name}}</option>{{end}}
+  </select>
+  <button type="submit" class="btn primary wide" disabled>
+    <span class="material-symbols-rounded">play_arrow</span>Start Workout
+  </button>
+</form>
+{{else}}
+<form class="narrow" hx-post="/workout/select" hx-target="#content" hx-trigger="change[target.value!='__add__']">
+  <label class="field">Select An Exercise
+    <select name="index" class="select" data-workout-select data-current="{{.Index}}">
+      {{range .Options}}<option value="{{.Index}}" {{if .Selected}}selected{{end}}>{{.Label}}</option>{{end}}
+      <option value="__add__">Add New Exercise...</option>
+    </select>
+  </label>
+</form>
+
+<dialog id="add-exercise-dialog" class="dialog">
+  <form hx-post="/workout/add" hx-target="#content">
+    <div class="dialog-head">
+      <strong>Add an Exercise to your Workout</strong>
+      <button type="button" class="rt-remove" aria-label="Close" onclick="this.closest('dialog').close()"><span class="material-symbols-rounded">close</span></button>
+    </div>
+    <label class="field">Select a new exercise to add
+      <select name="exercise" class="select">
+        {{range .AllExercises}}<option value="{{.}}">{{.}}</option>{{end}}
+      </select>
+    </label>
+    <button type="submit" class="btn wide">Add exercise</button>
+  </form>
+</dialog>
+
+{{with .Exercise}}
+<form class="plain" hx-target="#content" onsubmit="return false">
+  <input type="hidden" name="index" value="{{$.Workout.Index}}">
+
+  <div class="cols2">
+    <label class="field">Variation
+      <select name="variation">
+        {{$v := .Variation}}
+        {{range $.Workout.Variations}}<option value="{{.}}" {{if eq . $v}}selected{{end}}>{{.}}</option>{{end}}
+      </select>
+    </label>
+    <label class="field">Equipment
+      <select name="equipment">
+        {{$e := .Equipment}}
+        {{range $.Workout.Equipment}}<option value="{{.}}" {{if eq . $e}}selected{{end}}>{{.}}</option>{{end}}
+      </select>
+    </label>
+  </div>
+
+  <h2 class="sets-title">Sets</h2>
+  <div class="cols2 set-head"><span>Reps</span><span>Weight</span></div>
+  {{range $i, $s := .Sets}}
+  <div class="cols2 set-row">
+    <input type="number" name="reps" min="0" step="1" inputmode="numeric" value="{{$s.Reps}}" aria-label="Reps Set {{inc $i}}">
+    <input type="number" name="weight" min="0" step="0.5" inputmode="decimal" value="{{$s.Weight}}" aria-label="Weight Set {{inc $i}}"
+           title="Barbell + Plates = Total, Dumbbells/Kettlebells = Individual">
+  </div>
+  {{end}}
+
+  <hr>
+  <div class="actions3">
+    <button type="button" class="btn" hx-post="/workout/set" hx-vals='{"action":"add"}'><span class="material-symbols-rounded">add</span>Add</button>
+    <button type="button" class="btn" hx-post="/workout/set" hx-vals='{"action":"drop"}'><span class="material-symbols-rounded">remove</span>Drop</button>
+    <button type="button" class="btn" hx-post="/workout/set" hx-vals='{"action":"update"}'><span class="material-symbols-rounded">upgrade</span>Update</button>
+  </div>
+</form>
+{{end}}
+
+<hr>
+<div class="cols2 end-cols">
+  <details class="expander">
+    <summary><span class="material-symbols-rounded">save</span> Finish Workout</summary>
+    <div class="alert warning">This will commit your routine to disk.</div>
+    <form hx-post="/workout/finish" hx-target="#content"><button type="submit" class="btn">Confirm</button></form>
+  </details>
+  <details class="expander">
+    <summary><span class="material-symbols-rounded">cancel</span> Cancel Workout</summary>
+    <div class="alert warning">This will erase your current progress.</div>
+    <form hx-post="/workout/cancel" hx-target="#content"><button type="submit" class="btn">Confirm</button></form>
+  </details>
+</div>
+{{end}}
+{{end}}
+{{end}}
+{{end}}

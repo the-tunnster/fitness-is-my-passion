@@ -1,0 +1,42 @@
+{{define "content"}}
+<h1>Exercise Editor</h1>
+<p>
+  Select an exercise to edit its details, variations, and equipment options.<br>
+  If I'm trusting you with this, please don't fuck it up.<br>
+</p>
+
+{{if .Error}}<div class="alert error">{{.Error}}</div>{{end}}
+{{if .Success}}<div class="alert success">{{.Success}}</div>{{end}}
+
+<form class="narrow" hx-get="/exercises/manage" hx-target="#content" hx-push-url="true" hx-trigger="change">
+  <select name="exercise" class="select" aria-label="Select an exercise to edit">
+    <option value="">None</option>
+    {{range .Exercises}}<option value="{{.Name}}" {{if and $.Exercise (eq .Name $.Exercise.Name)}}selected{{end}}>{{.Name}}</option>{{end}}
+  </select>
+</form>
+
+{{with .Exercise}}
+<h2>Editing: {{.Name}}</h2>
+<form class="plain" hx-post="/exercises/manage" hx-target="#content" hx-disable-elt="find button">
+  <input type="hidden" name="id" value="{{.ID}}">
+  <input type="hidden" name="name" value="{{.Name}}">
+
+  <label class="field">Category
+    <select name="category">
+      {{$cat := .Category}}
+      {{range $.Categories}}<option value="{{.}}" {{if eq . $cat}}selected{{end}}>{{.}}</option>{{end}}
+    </select>
+  </label>
+
+  <div class="field"><strong>Exercise Variations</strong> (one per line)
+    <textarea name="variations" rows="{{rows .Variations}}" aria-label="Variations">{{join .Variations}}</textarea>
+  </div>
+
+  <div class="field"><strong>Equipment Required</strong> (one per line)
+    <textarea name="equipment" rows="{{rows .Equipment}}" aria-label="Equipment">{{join .Equipment}}</textarea>
+  </div>
+
+  <button type="submit" class="btn wide"><span class="material-symbols-rounded">save</span>Update</button>
+</form>
+{{end}}
+{{end}}
