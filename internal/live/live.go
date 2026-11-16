@@ -24,6 +24,7 @@ var (
 	ErrCreateWorkout   = errors.New("couldn't save workout")
 	ErrClearSession    = errors.New("couldn't clear the backend session")
 	ErrStartIncomplete = errors.New("session was created but could not be read back")
+	ErrCannotRecreate  = errors.New("backend session is gone and has no routine to recreate it from")
 )
 
 // State is the local session file: the backend session plus sync bookkeeping.
@@ -102,12 +103,40 @@ func (m *Manager) current(userID string) (*State, error) {
 	return st, nil
 }
 
-// push sends the full exercise list, so a retry after any failure is safe.
-func (m *Manager) push(st *State) error {
-	if err := m.client.UpdateSession(&st.Session); err != nil {
+// push sends the full exercise list, so a retry after any failure is safe. If the backend
+// no longer has the session (sessions expire after a while), it is recreated from the
+// routine and the local work is pushed into the new one.
+func (m *Manager) push(userID string, st *State) error {
+	err := m.client.UpdateSession(&st.Session)
+	if api.IsNotFound(err) {
+		if err = m.recreate(userID, st); err == nil {
+			err = m.client.UpdateSession(&st.Session)
+		}
+	}
+	if err != nil {
 		return err
 	}
 	st.Dirty = false
+	return m.save(st)
+}
+
+// recreate makes a fresh backend session for the same routine and adopts its id, keeping
+// the locally recorded exercises.
+func (m *Manager) recreate(userID string, st *State) error {
+	if st.RoutineID == "" {
+		return ErrCannotRecreate
+	}
+	if err := m.client.CreateSession(userID, st.RoutineID); err != nil {
+		return err
+	}
+	sess, err := m.client.SessionData(userID)
+	if err != nil {
+		return err
+	}
+	if sess == nil {
+		return ErrStartIncomplete
+	}
+	st.ID = sess.ID
 	return m.save(st)
 }
 
@@ -154,7 +183,7 @@ func (m *Manager) Update(userID string, fn func(*api.Session)) (*State, error) {
 	if err := m.save(st); err != nil {
 		return st, err
 	}
-	return st, m.push(st)
+	return st, m.push(userID, st)
 }
 
 // Result reports the non-fatal outcome of finishing a workout.
@@ -163,8 +192,9 @@ type Result struct {
 	HistoryErr error
 }
 
-// Finish pushes any unsynced changes, commits the session as a workout, removes the
-// backend session and finally the local file. It can be retried after a failure.
+// Finish pushes the session first (recreating it if the backend dropped it), commits it
+// as a workout, removes the backend session and finally the local file. It can be
+// retried after a failure.
 func (m *Manager) Finish(userID string) (Result, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -176,12 +206,13 @@ func (m *Manager) Finish(userID string) (Result, error) {
 		return Result{}, ErrNoSession
 	}
 
-	if st.Dirty {
-		if err := m.push(st); err != nil {
+	// Always push before committing (not only when dirty): the backend builds the workout
+	// from its own copy, which may have expired. Skipped once the workout exists, so a
+	// retry after a partial failure can't resurrect the session.
+	if st.WorkoutID == "" {
+		if err := m.push(userID, st); err != nil {
 			return Result{}, fmt.Errorf("%w: %v", ErrNotSynced, err)
 		}
-	}
-	if st.WorkoutID == "" {
 		id, err := m.client.CreateWorkout(st.ID, userID)
 		if err != nil {
 			return Result{}, fmt.Errorf("%w: %v", ErrCreateWorkout, err)

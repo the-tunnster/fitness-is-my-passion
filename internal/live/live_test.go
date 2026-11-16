@@ -3,6 +3,7 @@ package live
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -15,11 +16,15 @@ import (
 
 // fakeBackend implements just the endpoints the live session uses.
 type fakeBackend struct {
-	session      *api.Session
-	failPatch    atomic.Bool
-	failDelete   atomic.Bool
-	sessionGets  atomic.Int32
-	workoutPosts atomic.Int32
+	session         *api.Session
+	failPatch       atomic.Bool
+	failDelete      atomic.Bool
+	sessionGets     atomic.Int32
+	sessionsCreated atomic.Int32
+	workoutPosts    atomic.Int32
+	// workoutSets is how many sets the backend's copy of the first exercise had when the
+	// workout was built from it.
+	workoutSets atomic.Int32
 }
 
 func newManager(t *testing.T) (*Manager, *fakeBackend, string) {
@@ -30,10 +35,11 @@ func newManager(t *testing.T) (*Manager, *fakeBackend, string) {
 		json.NewEncoder(w).Encode(map[string]string{"id": "u1", "username": "t"})
 	})
 	mux.HandleFunc("POST /session/create", func(w http.ResponseWriter, r *http.Request) {
-		fb.session = &api.Session{ID: "s1", UserID: "u1", RoutineID: r.URL.Query().Get("routine_id"),
+		id := fmt.Sprintf("s%d", fb.sessionsCreated.Add(1))
+		fb.session = &api.Session{ID: id, UserID: "u1", RoutineID: r.URL.Query().Get("routine_id"),
 			Exercises: []api.SessionExercise{{ExerciseID: "e1", Name: "Squat", Sets: []api.WorkoutSet{{Reps: 8}}}}}
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode("s1")
+		json.NewEncoder(w).Encode(id)
 	})
 	mux.HandleFunc("GET /session/data", func(w http.ResponseWriter, r *http.Request) {
 		fb.sessionGets.Add(1)
@@ -48,11 +54,22 @@ func newManager(t *testing.T) (*Manager, *fakeBackend, string) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+		// Like the real backend: updating a session that doesn't exist (expired) is a 404.
+		if fb.session == nil || fb.session.ID != r.URL.Query().Get("session_id") {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
 		json.NewDecoder(r.Body).Decode(&fb.session.Exercises)
 		w.WriteHeader(http.StatusNoContent)
 	})
 	mux.HandleFunc("POST /workouts/create", func(w http.ResponseWriter, r *http.Request) {
+		// The backend builds the workout from its own copy of the session.
+		if fb.session == nil || fb.session.ID != r.URL.Query().Get("session_id") {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		fb.workoutPosts.Add(1)
+		fb.workoutSets.Store(int32(len(fb.session.Exercises[0].Sets)))
 		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode("w1")
 	})
@@ -194,6 +211,42 @@ func TestFinishRetryDoesNotDuplicateWorkout(t *testing.T) {
 	}
 	if fb.workoutPosts.Load() != 1 {
 		t.Fatalf("workout created %d times", fb.workoutPosts.Load())
+	}
+	if exists(path) {
+		t.Fatal("file should be removed after finishing")
+	}
+}
+
+func TestExpiredBackendSessionIsRecreatedKeepingLocalWork(t *testing.T) {
+	m, fb, _ := newManager(t)
+	st, _ := m.Start("u1", "r1")
+	oldID := st.ID
+
+	fb.session = nil // the backend's TTL removed it while the workout was idle
+
+	st, err := m.Update("u1", addSet)
+	if err != nil {
+		t.Fatalf("an expired session should be recreated transparently: %v", err)
+	}
+	if st.ID == oldID || st.Dirty {
+		t.Fatalf("expected a new, synced session; id %q -> %q, dirty=%v", oldID, st.ID, st.Dirty)
+	}
+	if got := len(fb.session.Exercises[0].Sets); got != 2 {
+		t.Fatalf("local work not pushed into the recreated session: %d sets", got)
+	}
+}
+
+func TestFinishCommitsLocalWorkEvenIfBackendSessionExpired(t *testing.T) {
+	m, fb, path := newManager(t)
+	m.Start("u1", "r1")
+	m.Update("u1", addSet) // local + backend now have 2 sets
+	fb.session = nil       // expires without us noticing: nothing is dirty
+
+	if _, err := m.Finish("u1"); err != nil {
+		t.Fatal(err)
+	}
+	if fb.workoutPosts.Load() != 1 || fb.workoutSets.Load() != 2 {
+		t.Fatalf("workout should be built from the local work: workouts=%d sets=%d", fb.workoutPosts.Load(), fb.workoutSets.Load())
 	}
 	if exists(path) {
 		t.Fatal("file should be removed after finishing")

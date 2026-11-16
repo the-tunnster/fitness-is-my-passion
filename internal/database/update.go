@@ -84,6 +84,7 @@ func UpdateExercise(exerciseID primitive.ObjectID, updates bson.M) (err error) {
 
 	if result.MatchedCount == 0 {
 		log.Println("No mathcing exercise id found")
+		err = mongo.ErrNoDocuments
 		return
 	}
 
@@ -113,6 +114,7 @@ func UpdateRoutine(routineID, userID primitive.ObjectID, updates bson.M) (err er
 
 	if result.MatchedCount == 0 {
 		log.Println("No mathcing user id found")
+		err = mongo.ErrNoDocuments
 		return
 	}
 
@@ -141,6 +143,7 @@ func UpdateSession(sessionID primitive.ObjectID, updates bson.M) (err error) {
 
 	if result.MatchedCount == 0 {
 		log.Println("No mathcing session found")
+		err = mongo.ErrNoDocuments
 		return
 	}
 

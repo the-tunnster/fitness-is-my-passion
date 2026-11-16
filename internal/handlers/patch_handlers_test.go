@@ -1,11 +1,29 @@
 package handlers
 
 import (
+	"errors"
+	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"testing"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 )
+
+func TestRespondUpdateErrorDistinguishesMissingFromFailed(t *testing.T) {
+	rec := httptest.NewRecorder()
+	respondUpdateError(rec, mongo.ErrNoDocuments, "session")
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("nothing matched: got %d, want 404 (never a silent success)", rec.Code)
+	}
+
+	rec = httptest.NewRecorder()
+	respondUpdateError(rec, errors.New("connection reset"), "session")
+	if rec.Code != http.StatusInternalServerError {
+		t.Errorf("other failures: got %d, want 500", rec.Code)
+	}
+}
 
 func TestExerciseUpdatesKeepsOnlyEditableFields(t *testing.T) {
 	incoming := map[string]interface{}{

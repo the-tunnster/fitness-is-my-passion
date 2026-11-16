@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
@@ -13,7 +14,18 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
+
+// respondUpdateError reports a failed update: 404 when nothing matched (e.g. a session
+// that has expired), 500 for anything else. Callers must not report success in either case.
+func respondUpdateError(w http.ResponseWriter, err error, what string) {
+	if errors.Is(err, mongo.ErrNoDocuments) {
+		utils.ErrorResponse(w, http.StatusNotFound, "No matching "+what+" found")
+		return
+	}
+	utils.ErrorResponse(w, http.StatusInternalServerError, "Failed to update "+what)
+}
 
 func UpdateUserHandler(w http.ResponseWriter, r *http.Request) {
 	userID := r.URL.Query().Get("user_id")
@@ -104,7 +116,7 @@ func UpdateExerciseHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = database.UpdateExercise(exerciseObjID, updates)
 	if err != nil {
-		utils.ErrorResponse(w, http.StatusInternalServerError, "Failed to update exercise")
+		respondUpdateError(w, err, "exercise")
 		return
 	}
 
@@ -155,7 +167,7 @@ func UpdateRoutineHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = database.UpdateRoutine(routineObjID, userObjID, updates)
 	if err != nil {
-		utils.ErrorResponse(w, http.StatusInternalServerError, "Failed to update routine")
+		respondUpdateError(w, err, "routine")
 		return
 	}
 
@@ -212,7 +224,7 @@ func UpdateSessionHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = database.UpdateSession(sessionObjID, updates)
 	if err != nil {
-		utils.ErrorResponse(w, http.StatusInternalServerError, "Failed to update session")
+		respondUpdateError(w, err, "session")
 		return
 	}
 

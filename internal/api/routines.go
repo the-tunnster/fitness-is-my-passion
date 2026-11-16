@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -68,7 +69,23 @@ func (c *Client) sendH(method, path string, query url.Values, body any, headers 
 		}
 	}
 	resp.Body.Close()
-	return nil, fmt.Errorf("%s %s: status %d", method, path, resp.StatusCode)
+	return nil, &StatusError{Method: method, Path: path, Code: resp.StatusCode}
+}
+
+// StatusError is returned when the API answers with an unexpected status.
+type StatusError struct {
+	Method, Path string
+	Code         int
+}
+
+func (e *StatusError) Error() string {
+	return fmt.Sprintf("%s %s: status %d", e.Method, e.Path, e.Code)
+}
+
+// IsNotFound reports whether err is an API 404, e.g. a session that no longer exists.
+func IsNotFound(err error) bool {
+	var se *StatusError
+	return errors.As(err, &se) && se.Code == http.StatusNotFound
 }
 
 func (c *Client) RoutineList(userID string) ([]Routine, error) {
