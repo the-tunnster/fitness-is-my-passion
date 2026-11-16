@@ -31,6 +31,9 @@ group is what stands between this repo and retiring the old apps.
   `internal/api`'s HTTP client, and have the live session push straight to the database.
   - [ ] Decide what happens to `MOCK_ANALYTICS` (keep as a second implementation of the
     same interface, or drop it once real data exists).
+- [ ] **Migrate to `go.mongodb.org/mongo-driver/v2`.** `go get` warns that v1 is deprecated
+  (still works). Do it after the first database test pass, as a separate change: `primitive.ObjectID`
+  becomes `bson.ObjectID`, `mongo.Connect` drops the context, and some `options` change (~22 files).
 - [ ] Decide the final module path (currently `fitness-tracker`, the backend's) and the
   repo name / remote. There is no git remote yet.
 - [ ] Decide whether the API should stay exposed on the same listener as the UI. It has no
