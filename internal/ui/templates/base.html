@@ -6,8 +6,8 @@
   <title>{{.Title}} · Fitness Tracker</title>
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
   <meta name="apple-mobile-web-app-title" content="Fitness Tracker">
-  <link rel="stylesheet" href="/static/style.css">
-  <script src="/static/htmx.min.js"></script>
+  <link rel="stylesheet" href="{{asset "style.css"}}">
+  <script src="{{asset "htmx.min.js"}}"></script>
   <script>
     // Set before first paint to avoid a flash. Small screens always start collapsed; desktop remembers the last choice.
     (function () {
@@ -33,8 +33,8 @@
     {{end}}
   </nav>
   <main id="content">{{template "content" .}}</main>
-  <script src="/static/sortable.min.js"></script>
-  <script src="/static/chart.umd.min.js"></script>
-  <script src="/static/app.js"></script>
+  <script src="{{asset "sortable.min.js"}}"></script>
+  <script src="{{asset "chart.umd.min.js"}}"></script>
+  <script src="{{asset "app.js"}}"></script>
 </body>
 </html>{{end}}

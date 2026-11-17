@@ -118,6 +118,7 @@ type RoutineRow struct {
 }
 
 var funcs = template.FuncMap{
+	"asset": assetURL,
 	"inc": func(i int) int { return i + 1 },
 	"rowData": func(names []string, row RoutineRow) map[string]any {
 		return map[string]any{"Names": names, "Row": row}
@@ -180,5 +181,14 @@ func StaticHandler() http.Handler {
 	if err != nil {
 		panic(err)
 	}
-	return http.StripPrefix("/static/", http.FileServer(http.FS(sub)))
+	files := http.StripPrefix("/static/", http.FileServer(http.FS(sub)))
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("v") != "" {
+			// The URL changes whenever the file does (see assetURL).
+			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		} else {
+			w.Header().Set("Cache-Control", "public, max-age=86400")
+		}
+		files.ServeHTTP(w, r)
+	})
 }

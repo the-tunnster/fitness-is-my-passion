@@ -9,6 +9,7 @@ import (
 	"fitness-tracker/internal/api"
 	"fitness-tracker/internal/config"
 	"fitness-tracker/internal/database"
+	"fitness-tracker/internal/ui"
 	"fitness-tracker/internal/web"
 )
 
@@ -37,5 +38,5 @@ func main() {
 
 	addr := ":" + config.AppConfig.Port
 	log.Printf("Server running on %s", addr)
-	log.Fatal(http.ListenAndServe(addr, mux))
+	log.Fatal(http.ListenAndServe(addr, ui.Compress(mux)))
 }
