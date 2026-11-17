@@ -1,9 +1,8 @@
 # Fitness Tracker
 
 A personal, single-user fitness tracker: one Go binary that serves a web UI (HTML + HTMX)
-and the JSON API behind it, backed by MongoDB Atlas. Everything (UI and `/api`) is behind
-HTTP Basic Auth using `AUTH_USER` and `AUTH_PASSWORD`. Basic Auth sends the password on every
-request, so only expose it over HTTPS (or a private network such as Tailscale).
+and the JSON API behind it, backed by MongoDB Atlas. There is no authentication of its own;
+it is meant to be reached only over a private network such as Tailscale.
 
 ## Layout
 
@@ -23,10 +22,8 @@ The UI is served at `/`, the API at `/api/...` (for example `/api/me`).
 ## Running
 
 1. Copy `.env.example` to `.env` and fill in `MONGODB_URI` (the database is created and
-   seeded with the built-in exercise list on first start) and `AUTH_USER` /
-   `AUTH_PASSWORD` (required; the server won't start without them).
-2. `go run .` (or `go build` and run the binary), then open `http://localhost:8090` and log
-   in with those credentials.
+   seeded with the built-in exercise list on first start).
+2. `go run .` (or `go build` and run the binary), then open `http://localhost:8090`.
 
 Settings are in `.env.example`: `PORT`, `BIND_ADDR`, `SESSION_FILE`, and a few optional ones.
 Requires Go 1.24+.

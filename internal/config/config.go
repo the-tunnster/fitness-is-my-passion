@@ -13,8 +13,6 @@ type Config struct {
 
 	Port              string
 	BindAddr          string
-	AuthUser          string
-	AuthPassword      string
 	StaticExercises   StaticExercises
 	ExercisesJSONPath string
 }
@@ -38,12 +36,6 @@ func LoadConfig() {
 	port := getEnvWithDefault("PORT", "8090")
 	bindAddr := os.Getenv("BIND_ADDR") // e.g. the Tailscale IP; empty listens on all interfaces
 
-	authUser := os.Getenv("AUTH_USER")
-	authPassword := os.Getenv("AUTH_PASSWORD")
-	if authUser == "" || authPassword == "" {
-		log.Fatal("Missing environment variables: AUTH_USER and/or AUTH_PASSWORD")
-	}
-
 	// Empty means "use the exercise list built into the binary".
 	exercisesJSON := os.Getenv("EXERCISES_JSON_PATH")
 
@@ -61,9 +53,6 @@ func LoadConfig() {
 		MongoDB:  db,
 		Port:     port,
 		BindAddr: bindAddr,
-
-		AuthUser:     authUser,
-		AuthPassword: authPassword,
 
 		ExercisesJSONPath: exercisesJSON,
 
