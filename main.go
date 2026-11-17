@@ -9,12 +9,13 @@ import (
 	"fitness-tracker/internal/api"
 	"fitness-tracker/internal/config"
 	"fitness-tracker/internal/database"
+	"fitness-tracker/internal/middleware"
 	"fitness-tracker/internal/routes"
 	"fitness-tracker/internal/web"
 )
 
-// sessionFile is where the live workout session is kept; mount it as a volume when
-// running in Docker so an in-progress workout survives a restart.
+// sessionFile is where the live workout session is kept, so an in-progress workout
+// survives a restart.
 func sessionFile() string {
 	if p := os.Getenv("SESSION_FILE"); p != "" {
 		return p
@@ -49,5 +50,5 @@ func main() {
 
 	addr := config.AppConfig.BindAddr + ":" + config.AppConfig.Port
 	log.Printf("Server running on %s", addr)
-	log.Fatal(http.ListenAndServe(addr, mux))
+	log.Fatal(http.ListenAndServe(addr, middleware.BasicAuth(config.AppConfig.AuthUser, config.AppConfig.AuthPassword, mux)))
 }

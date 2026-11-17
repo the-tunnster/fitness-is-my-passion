@@ -1,0 +1,14 @@
+[Unit]
+Description=Fitness Tracker Go Backend
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu
+ExecStart=/home/ubuntu/fitness-tracker
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

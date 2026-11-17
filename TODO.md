@@ -5,17 +5,41 @@ group is what stands between this repo and retiring the old apps.
 
 ## Before the old apps can be retired
 
-- [ ] **Dockerfile and `docker-compose.yaml`** for the single binary: multi-stage build,
-  `CGO_ENABLED=0`, `linux/arm64` for the Orange Pi, a volume for `SESSION_FILE`, env from
-  `.env`. Untested so far (no Docker on the dev machine).
-  - [ ] Decide how it is deployed on the Orange Pi: Docker, or the plain binary under systemd.
-  - [ ] Decide `BIND_ADDR` (Tailscale IP) for the new deployment.
+- [ ] **Automated deploy (no Docker).** The single binary runs under the existing systemd
+  service on the VM; `SESSION_FILE` and other temporary data are plain local files.
+  - [ ] Adopt a `master` + `dev` branch flow: work lands on `dev` and is tested there, then
+    merged into `master`.
+  - [ ] GitHub Actions workflow on push to `master`: build with `CGO_ENABLED=0`
+    (`GOOS=linux`, `GOARCH=arm64` for the Orange Pi), `scp` the binary to the VM, then
+    restart the systemd service over SSH. Store the SSH key, host and user as repository secrets.
+  - [ ] Also a local script (same build + `scp` + restart) for manual pushes.
+  - [ ] Make the upload safe: copy to a temp name and `mv` into place, so a running binary
+    is never overwritten mid-copy.
+  - [ ] Decide `BIND_ADDR` for the new deployment (public HTTPS now, so likely `:443`/`:80`
+    rather than a Tailscale IP), and where the env/`.env`
+    and `SESSION_FILE` live on the VM (the service's `EnvironmentFile` / `WorkingDirectory`).
+- [ ] **HTTPS certificate support with `golang.org/x/crypto/acme/autocert`.** Serve the UI
+  over TLS at `https://fitness-tracker.the-tunnster.com` (no port in the URL; standard 443),
+  with certificates issued and renewed automatically (Let's Encrypt). ddclient on the VM
+  already keeps the domain pointing at it.
+  - [ ] Add config (e.g. `TLS_DOMAIN=fitness-tracker.the-tunnster.com`, `CERT_CACHE_DIR`,
+    optional `ACME_EMAIL`); keep plain HTTP when unset so local development still works.
+  - [ ] Use `autocert.Manager` with `HostPolicy` limited to the configured domain and a
+    `DirCache` in a local directory that deploys never overwrite.
+  - [ ] Serve on 443 with `manager.TLSConfig()`, and run a port 80 listener
+    (`manager.HTTPHandler`) for the HTTP-01 challenge and redirect to HTTPS.
+  - [ ] Let the service bind ports 80/443 without root (systemd `AmbientCapabilities=CAP_NET_BIND_SERVICE`).
+  - [ ] Open/forward ports 80 and 443 to the VM (router/firewall) and check they are
+    reachable from the internet, which Let's Encrypt needs for HTTP-01.
+  - [ ] Basic Auth is already in place (`AUTH_USER`/`AUTH_PASSWORD`), but it must not be
+    reachable over plain HTTP: do not open ports 80/443 until HTTPS works, and make the
+    port 80 listener only redirect.
 - [ ] **Confirm feature parity with Streamlit**, page by page, using real data.
 - [ ] **Remove the Streamlit app** (`fitness-frontend`) once parity is confirmed. Until
   then it keeps working if started with `BACKEND_URL=http://opi5:8090/api` (the API moved
   under `/api`). Do not delete it without an explicit go-ahead.
 - [ ] **Stop the old services on the Orange Pi** (Streamlit on 8501, the old backend on 8090)
-  when the new binary takes over port 8090.
+  when the new binary takes over (it moves to 80/443, so 8090 is freed).
 - [ ] **Rotate the Atlas database password.** It was pasted into a chat while testing.
 - [ ] **Try a real workout end to end** with the live-session file on real data, including
   killing the server mid-workout and restarting it.
@@ -32,8 +56,9 @@ group is what stands between this repo and retiring the old apps.
   becomes `bson.ObjectID`, `mongo.Connect` drops the context, and some `options` change (~22 files).
 - [ ] Decide the final module path (currently `fitness-tracker`, the backend's) and the
   repo name / remote. There is no git remote yet.
-- [ ] Decide whether the API should stay exposed on the same listener as the UI. It has no
-  authentication of its own and relies on the private network (Tailscale).
+- [ ] Basic Auth now covers the UI and `/api` on the one listener. Later: login rate
+  limiting / lockout, a proper login page with sessions (or OIDC), and whether `/api` still
+  needs to be reachable from outside the process at all (see the direct-calls item above).
 
 ## Backend review items not fixed yet
 

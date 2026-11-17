@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"fitness-tracker/internal/config"
 )
 
 // Client talks to the existing backend API as-is.
@@ -23,6 +25,15 @@ type Client struct {
 	userID string
 
 	cache exerciseCache
+}
+
+// basicAuthTransport adds the server's own credentials to the loopback API calls.
+type basicAuthTransport struct{ user, pass string }
+
+func (t basicAuthTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	r = r.Clone(r.Context())
+	r.SetBasicAuth(t.user, t.pass)
+	return http.DefaultTransport.RoundTrip(r)
 }
 
 // UserID returns the current user's id, fetched once from /me.
@@ -49,7 +60,10 @@ func NewClient(defaultBase string) *Client {
 	}
 	return &Client{
 		BaseURL: strings.TrimRight(base, "/"),
-		HTTP:    &http.Client{Timeout: 10 * time.Second},
+		HTTP: &http.Client{
+			Timeout:   10 * time.Second,
+			Transport: basicAuthTransport{config.AppConfig.AuthUser, config.AppConfig.AuthPassword},
+		},
 		Mock:    os.Getenv("MOCK_ANALYTICS") == "1",
 	}
 }
