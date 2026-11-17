@@ -12,9 +12,8 @@ group is what stands between this repo and retiring the old apps.
   - [ ] GitHub Actions workflow on push to `master`: build with `CGO_ENABLED=0`
     (`GOOS=linux`, `GOARCH=arm64` for the Orange Pi), `scp` the binary to the VM, then
     restart the systemd service over SSH. Store the SSH key, host and user as repository secrets.
-  - [ ] Also a local script (same build + `scp` + restart) for manual pushes.
-  - [ ] Make the upload safe: copy to a temp name and `mv` into place, so a running binary
-    is never overwritten mid-copy.
+  - [ ] Reuse `scripts/deploy.sh` (local test + build + upload + restart, already safe and
+    with `--rollback`) from the workflow instead of duplicating its steps.
   - [ ] Decide where the env/`.env`
     and `SESSION_FILE` live on the VM (the service's `EnvironmentFile` / `WorkingDirectory`).
 - [ ] **Stop the old services on the Orange Pi** (Streamlit on 8501, the old backend on 8090)

@@ -3,3 +3,4 @@ data/
 .env
 fitness-tracker
 .DS_Store
+dist/
