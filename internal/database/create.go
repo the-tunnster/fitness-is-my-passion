@@ -53,33 +53,3 @@ func CreateWorkout(workout models.FullWorkout) (workoutID primitive.ObjectID, er
 	workoutID = result.InsertedID.(primitive.ObjectID)
 	return
 }
-
-func CreateSession(session models.WorkoutSession) (sessionID primitive.ObjectID, err error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	collection := GetCollection("sessions")
-
-	result, err := collection.InsertOne(ctx, session)
-	if err != nil {
-		return
-	}
-
-	sessionID = result.InsertedID.(primitive.ObjectID)
-	return
-}
-
-func CreateExerciseHistory(history models.ExerciseHistory) (historyID primitive.ObjectID, err error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	collection := GetCollection("exerciseHistory")
-
-	result, err := collection.InsertOne(ctx, history)
-	if err != nil {
-		return
-	}
-
-	historyID = result.InsertedID.(primitive.ObjectID)
-	return
-}

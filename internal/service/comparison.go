@@ -1,4 +1,4 @@
-package handlers
+package service
 
 import (
 	"fitness-tracker/internal/models"
@@ -6,9 +6,9 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// metricChange is one exercise's stats in the latest workout and how they moved since
+// MetricChange is one exercise's stats in the latest workout and how they moved since
 // the one before it.
-type metricChange struct {
+type MetricChange struct {
 	ExerciseName string  `json:"exercise_name"`
 	Variation    string  `json:"variation"`
 	MaxWeight    float64 `json:"max_weight"`
@@ -37,11 +37,11 @@ func totalsOf(sets []models.WorkoutSet) exerciseTotals {
 	return t
 }
 
-// compareWorkouts compares the latest workout with the previous one. Exercises are
+// CompareWorkouts compares the latest workout with the previous one. Exercises are
 // matched by name and variation and returned in the order they were done in the latest
 // workout; exercises not present in the previous workout show their own totals as the change.
-func compareWorkouts(latest, previous models.FullWorkout, nameOf func(primitive.ObjectID) string) []metricChange {
-	byKey := make(map[string]metricChange)
+func CompareWorkouts(latest, previous models.FullWorkout, nameOf func(primitive.ObjectID) string) []MetricChange {
+	byKey := make(map[string]MetricChange)
 	var order []string
 
 	for _, ex := range latest.Exercises {
@@ -51,7 +51,7 @@ func compareWorkouts(latest, previous models.FullWorkout, nameOf func(primitive.
 		if _, seen := byKey[key]; !seen {
 			order = append(order, key)
 		}
-		byKey[key] = metricChange{
+		byKey[key] = MetricChange{
 			ExerciseName: name,
 			Variation:    ex.Variation,
 			MaxWeight:    t.maxWeight,
@@ -76,7 +76,7 @@ func compareWorkouts(latest, previous models.FullWorkout, nameOf func(primitive.
 		byKey[key] = current
 	}
 
-	changes := make([]metricChange, 0, len(order))
+	changes := make([]MetricChange, 0, len(order))
 	for _, key := range order {
 		changes = append(changes, byKey[key])
 	}

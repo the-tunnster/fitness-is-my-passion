@@ -36,7 +36,7 @@ func applyExerciseForm(ex *api.SessionExercise, r *http.Request) {
 	ex.Sets = sets
 }
 
-func registerWorkout(mux *http.ServeMux, tpl ui.Templates, client *api.Client, sessions *live.Manager) {
+func registerWorkout(mux *http.ServeMux, tpl ui.Templates, client api.Backend, sessions *live.Manager) {
 	// render shows the recorder from the live session (local file; the backend is only
 	// consulted when no file exists).
 	render := func(w http.ResponseWriter, r *http.Request, m workoutMsg) {

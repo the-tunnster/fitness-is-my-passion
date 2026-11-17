@@ -12,7 +12,6 @@ type Config struct {
 	MongoDB  string
 
 	Port              string
-	BindAddr          string
 	StaticExercises   StaticExercises
 	ExercisesJSONPath string
 }
@@ -34,7 +33,6 @@ func LoadConfig() {
 	uri := os.Getenv("MONGODB_URI")
 	db := getEnvWithDefault("MONGODB_DBNAME", "fitness_app")
 	port := getEnvWithDefault("PORT", "8090")
-	bindAddr := os.Getenv("BIND_ADDR") // e.g. the Tailscale IP; empty listens on all interfaces
 
 	// Empty means "use the exercise list built into the binary".
 	exercisesJSON := os.Getenv("EXERCISES_JSON_PATH")
@@ -52,7 +50,6 @@ func LoadConfig() {
 		MongoURI: uri,
 		MongoDB:  db,
 		Port:     port,
-		BindAddr: bindAddr,
 
 		ExercisesJSONPath: exercisesJSON,
 

@@ -21,7 +21,6 @@ func UpsertSession(session models.WorkoutSession) (sessionID primitive.ObjectID,
 
 	// Single active session per user
 	filter := bson.M{"userID": session.UserID}
-	// Ensure TTL is current
 	session.LastUpdate = primitive.NewDateTimeFromTime(time.Now())
 	update := bson.M{"$set": session}
 	opts := options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.After)
@@ -46,7 +45,7 @@ func UpdateUser(userID primitive.ObjectID, updates bson.M) (err error) {
 
 	collection := GetCollection("users")
 
-	_, err = collection.UpdateOne(ctx,
+	result, err := collection.UpdateOne(ctx,
 		bson.M{
 			"_id": userID,
 		},
@@ -57,6 +56,12 @@ func UpdateUser(userID primitive.ObjectID, updates bson.M) (err error) {
 	if err != nil {
 		log.Println("Error updating user information")
 		log.Println(err)
+		return
+	}
+
+	if result.MatchedCount == 0 {
+		log.Println("No matching user found")
+		err = mongo.ErrNoDocuments
 	}
 
 	return

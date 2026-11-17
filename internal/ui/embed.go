@@ -68,7 +68,6 @@ type PageData struct {
 	Info          string
 	Warning       string
 	Notice        string
-	Mock          bool
 
 	Selected   string
 	Metrics    []MetricGroup

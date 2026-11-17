@@ -23,9 +23,9 @@ func metric(label string, value, change float64) ui.Metric {
 	return m
 }
 
-func registerAnalytics(mux *http.ServeMux, tpl ui.Templates, client *api.Client) {
+func registerAnalytics(mux *http.ServeMux, tpl ui.Templates, client api.Backend) {
 	mux.HandleFunc("GET /workout/analytics", func(w http.ResponseWriter, r *http.Request) {
-		data := ui.PageData{Title: "Post Workout Analytics", Mock: client.Mock, Selected: r.URL.Query().Get("routine")}
+		data := ui.PageData{Title: "Post Workout Analytics", Selected: r.URL.Query().Get("routine")}
 		userID, err := client.UserID()
 		if err != nil {
 			log.Println(err)
@@ -64,7 +64,7 @@ func registerAnalytics(mux *http.ServeMux, tpl ui.Templates, client *api.Client)
 	})
 
 	mux.HandleFunc("GET /history", func(w http.ResponseWriter, r *http.Request) {
-		data := ui.PageData{Title: "Historical Workout Analytics", Mock: client.Mock, Selected: r.URL.Query().Get("exercise")}
+		data := ui.PageData{Title: "Historical Workout Analytics", Selected: r.URL.Query().Get("exercise")}
 		userID, err := client.UserID()
 		if err != nil {
 			log.Println(err)

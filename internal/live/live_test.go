@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"sync/atomic"
@@ -14,8 +12,11 @@ import (
 	"fitness-tracker/internal/api"
 )
 
-// fakeBackend implements just the endpoints the live session uses.
+// fakeBackend is an in-memory stand-in for the data source; it implements just the
+// calls the live session makes.
 type fakeBackend struct {
+	api.Backend
+
 	session         *api.Session
 	failPatch       atomic.Bool
 	failDelete      atomic.Bool
@@ -27,68 +28,68 @@ type fakeBackend struct {
 	workoutSets atomic.Int32
 }
 
+func clone[T any](v T) T {
+	b, _ := json.Marshal(v)
+	var out T
+	json.Unmarshal(b, &out)
+	return out
+}
+
+func (fb *fakeBackend) UserID() (string, error) { return "u1", nil }
+
+func (fb *fakeBackend) CreateSession(userID, routineID string) error {
+	id := fmt.Sprintf("s%d", fb.sessionsCreated.Add(1))
+	fb.session = &api.Session{ID: id, UserID: "u1", RoutineID: routineID,
+		Exercises: []api.SessionExercise{{ExerciseID: "e1", Name: "Squat", Sets: []api.WorkoutSet{{Reps: 8}}}}}
+	return nil
+}
+
+func (fb *fakeBackend) SessionData(userID string) (*api.Session, error) {
+	fb.sessionGets.Add(1)
+	if fb.session == nil {
+		return nil, nil
+	}
+	s := clone(*fb.session)
+	return &s, nil
+}
+
+func (fb *fakeBackend) UpdateSession(s *api.Session) error {
+	if fb.failPatch.Load() {
+		return errors.New("update failed")
+	}
+	// Like the real backend: updating a session that doesn't exist (expired) is not found.
+	if fb.session == nil || fb.session.ID != s.ID {
+		return api.ErrNotFound
+	}
+	fb.session.Exercises = clone(s.Exercises)
+	return nil
+}
+
+func (fb *fakeBackend) CreateWorkout(sessionID string) (string, error) {
+	// The backend builds the workout from its own copy of the session.
+	if fb.session == nil || fb.session.ID != sessionID {
+		return "", errors.New("no such session")
+	}
+	fb.workoutPosts.Add(1)
+	fb.workoutSets.Store(int32(len(fb.session.Exercises[0].Sets)))
+	return "w1", nil
+}
+
+func (fb *fakeBackend) DeleteSession(sessionID string) error {
+	if fb.failDelete.Load() {
+		return errors.New("delete failed")
+	}
+	fb.session = nil
+	return nil
+}
+
+func (fb *fakeBackend) UpdateHistory(userID, workoutID string) error { return nil }
+
 func newManager(t *testing.T) (*Manager, *fakeBackend, string) {
 	t.Helper()
 	fb := &fakeBackend{}
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /me", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(map[string]string{"id": "u1", "username": "t"})
-	})
-	mux.HandleFunc("POST /session/create", func(w http.ResponseWriter, r *http.Request) {
-		id := fmt.Sprintf("s%d", fb.sessionsCreated.Add(1))
-		fb.session = &api.Session{ID: id, UserID: "u1", RoutineID: r.URL.Query().Get("routine_id"),
-			Exercises: []api.SessionExercise{{ExerciseID: "e1", Name: "Squat", Sets: []api.WorkoutSet{{Reps: 8}}}}}
-		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(id)
-	})
-	mux.HandleFunc("GET /session/data", func(w http.ResponseWriter, r *http.Request) {
-		fb.sessionGets.Add(1)
-		if fb.session == nil {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-		json.NewEncoder(w).Encode(fb.session)
-	})
-	mux.HandleFunc("PATCH /session/update", func(w http.ResponseWriter, r *http.Request) {
-		if fb.failPatch.Load() {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		// Like the real backend: updating a session that doesn't exist (expired) is a 404.
-		if fb.session == nil || fb.session.ID != r.URL.Query().Get("session_id") {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-		json.NewDecoder(r.Body).Decode(&fb.session.Exercises)
-		w.WriteHeader(http.StatusNoContent)
-	})
-	mux.HandleFunc("POST /workouts/create", func(w http.ResponseWriter, r *http.Request) {
-		// The backend builds the workout from its own copy of the session.
-		if fb.session == nil || fb.session.ID != r.URL.Query().Get("session_id") {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		fb.workoutPosts.Add(1)
-		fb.workoutSets.Store(int32(len(fb.session.Exercises[0].Sets)))
-		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode("w1")
-	})
-	mux.HandleFunc("DELETE /session/delete", func(w http.ResponseWriter, r *http.Request) {
-		if fb.failDelete.Load() {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		fb.session = nil
-		w.WriteHeader(http.StatusNoContent)
-	})
-	mux.HandleFunc("PATCH /history/update", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNoContent)
-	})
-	srv := httptest.NewServer(mux)
-	t.Cleanup(srv.Close)
-
 	path := filepath.Join(t.TempDir(), "live.json")
-	return New(&api.Client{BaseURL: srv.URL, HTTP: srv.Client()}, path), fb, path
+	return New(fb, path), fb, path
 }
 
 func exists(path string) bool {

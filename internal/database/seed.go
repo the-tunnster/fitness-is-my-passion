@@ -153,3 +153,22 @@ func upsertExerciseByName(ctx context.Context, exercises *mongo.Collection, ex m
 	}
 	return res.UpsertedID != nil, nil
 }
+
+// EnsureUser creates the default user if the database has none. This app has a single
+// user, so it only happens on a fresh database.
+func EnsureUser(ctx context.Context, db *mongo.Database) error {
+	users := db.Collection("users")
+	n, err := users.CountDocuments(ctx, bson.M{})
+	if err != nil || n > 0 {
+		return err
+	}
+	_, err = users.InsertOne(ctx, models.User{
+		Username:       "Athlete",
+		Gender:         "male",
+		DateOfBirth:    "2000-01-01T00:00:00Z",
+		Height:         175.0,
+		Weight:         75.0,
+		UnitPreference: "metric",
+	})
+	return err
+}

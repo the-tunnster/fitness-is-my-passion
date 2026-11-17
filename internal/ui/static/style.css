@@ -103,7 +103,28 @@ p { margin: 0 0 1rem; line-height: 1.6; }
 }
 .page-link:hover { text-decoration: underline; }
 
-.material-symbols-rounded { font-size: 1.1rem; }
+/* Subset of Material Symbols Rounded holding only the icons used; see README to regenerate. */
+@font-face {
+  font-family: "Material Symbols Rounded";
+  font-style: normal;
+  font-weight: 400;
+  src: url(/static/material-symbols-rounded.woff2) format("woff2");
+}
+
+.material-symbols-rounded {
+  font-family: "Material Symbols Rounded";
+  font-weight: normal;
+  font-style: normal;
+  font-size: 1.1rem;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+}
 
 .card {
   display: flex;

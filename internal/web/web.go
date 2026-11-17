@@ -11,9 +11,9 @@ import (
 	"fitness-tracker/internal/ui"
 )
 
-// Register mounts the UI (pages and static assets) on mux. client is how the UI talks to
-// the JSON API; sessionFile is where the live workout session is kept.
-func Register(mux *http.ServeMux, client *api.Client, sessionFile string) error {
+// Register mounts the UI (pages and static assets) on mux. client is the UI's data
+// source; sessionFile is where the live workout session is kept.
+func Register(mux *http.ServeMux, client api.Backend, sessionFile string) error {
 	tpl, err := ui.ParseTemplates("home.html", "profile.html", "exercise_manage.html", "exercise_create.html", "routine_manage.html", "routine_create.html", "workout.html", "post_workout.html", "history.html")
 	if err != nil {
 		return err

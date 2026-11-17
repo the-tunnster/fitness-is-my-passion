@@ -57,7 +57,7 @@ func exerciseNames(exercises []api.Exercise) []string {
 	return names
 }
 
-func registerRoutines(mux *http.ServeMux, tpl ui.Templates, client *api.Client) {
+func registerRoutines(mux *http.ServeMux, tpl ui.Templates, client api.Backend) {
 	type manageView struct {
 		ID      string
 		Rows    []ui.RoutineRow // nil means load from the backend

@@ -9,40 +9,17 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// GetOrCreateUser returns the single app user, creating a default one on first run.
-func GetOrCreateUser() (user models.User, err error) {
+// GetUser returns the single app user. It is created once at startup by EnsureUser.
+func GetUser() (user models.User, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	collection := GetCollection("users")
-
 	findOpts := options.FindOne().SetSort(bson.D{{Key: "_id", Value: 1}})
-	err = collection.FindOne(ctx, bson.M{}, findOpts).Decode(&user)
-	if err == nil {
-		return user, nil
-	}
-	if err != mongo.ErrNoDocuments {
-		return models.User{}, err
-	}
-
-	user = models.User{
-		Username:       "Athlete",
-		Gender:         "male",
-		DateOfBirth:    "2000-01-01T00:00:00Z",
-		Height:         175.0,
-		Weight:         75.0,
-		UnitPreference: "metric",
-	}
-	result, err := collection.InsertOne(ctx, user)
-	if err != nil {
-		return models.User{}, err
-	}
-	user.ID = result.InsertedID.(primitive.ObjectID)
-	return user, nil
+	err = GetCollection("users").FindOne(ctx, bson.M{}, findOpts).Decode(&user)
+	return user, err
 }
 
 func GetUserRoutines(userID primitive.ObjectID) (routineList []models.Routine, err error) {
@@ -86,66 +63,6 @@ func GetRoutineData(userID, routineID primitive.ObjectID) (routine models.FullRo
 	return
 }
 
-func GetUserWorkouts(userID primitive.ObjectID) (workoutList []models.Workout, err error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	collection := GetCollection("workouts")
-
-	cursor, err := collection.Find(ctx, bson.M{
-		"userID": userID,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	for cursor.Next(ctx) {
-		var workout models.Workout
-		if err := cursor.Decode(&workout); err != nil {
-			continue
-		}
-		workoutList = append(workoutList, workout)
-	}
-
-	if err := cursor.Err(); err != nil {
-		log.Println("Error decoding some documents")
-		log.Println(err)
-	}
-
-	return
-}
-
-func GetUserWorkoutsByRoutine(userID, routineID primitive.ObjectID) (workoutList []models.Workout, err error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	collection := GetCollection("workouts")
-
-	cursor, err := collection.Find(ctx, bson.M{
-		"userID":    userID,
-		"routineID": routineID,
-	})
-	if err != nil {
-		return nil, err
-	}
-	defer cursor.Close(ctx)
-
-	for cursor.Next(ctx) {
-		var workout models.Workout
-		if err := cursor.Decode(&workout); err != nil {
-			continue
-		}
-		workoutList = append(workoutList, workout)
-	}
-
-	if err := cursor.Err(); err != nil {
-		log.Println("Error decoding some documents")
-		log.Println(err)
-	}
-
-	return
-}
-
 func GetLastWorkoutForRoutine(userID, routineID primitive.ObjectID) (last_workout models.FullWorkout, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -161,19 +78,6 @@ func GetLastWorkoutForRoutine(userID, routineID primitive.ObjectID) (last_workou
 	if err != nil {
 		return last_workout, err
 	}
-
-	return
-}
-
-func CountWorkouts(userID primitive.ObjectID) (workout_count int64, err error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	collection := GetCollection("workouts")
-
-	workout_count, err = collection.CountDocuments(ctx, bson.M{
-		"userID": userID,
-	})
 
 	return
 }
@@ -214,7 +118,7 @@ func GetSessionData(sessionID primitive.ObjectID) (session models.WorkoutSession
 	return
 }
 
-func GetExerciseList() (exercises []models.Exercise) {
+func GetExerciseList() (exercises []models.Exercise, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -222,8 +126,9 @@ func GetExerciseList() (exercises []models.Exercise) {
 
 	cursor, err := collection.Find(ctx, bson.M{})
 	if err != nil {
-		return nil
+		return nil, err
 	}
+	defer cursor.Close(ctx)
 
 	for cursor.Next(ctx) {
 		var exercise models.Exercise
@@ -233,7 +138,7 @@ func GetExerciseList() (exercises []models.Exercise) {
 		exercises = append(exercises, exercise)
 	}
 
-	return
+	return exercises, cursor.Err()
 }
 
 func GetExerciseID(exerciseName string) (exerciseID string, err error) {

@@ -1,6 +1,8 @@
 package service
 
 import (
+	"sort"
+
 	"fitness-tracker/internal/config"
 	"fitness-tracker/internal/database"
 	"fitness-tracker/internal/models"
@@ -81,4 +83,43 @@ func UpdateExerciseHistory(userID, workoutID string) error {
 	}
 
 	return nil
+}
+
+// DailyPoint is one day of an exercise's history: the heaviest weight and total volume.
+type DailyPoint struct {
+	Date   string  `json:"date"`
+	Weight float64 `json:"weight,omitempty"`
+	Volume float64 `json:"volume,omitempty"`
+}
+
+// SummarizeHistory groups an exercise's history by date (oldest first), ignoring sets
+// without reps or weight. It returns a non-nil empty slice when nothing qualifies.
+func SummarizeHistory(h models.ExerciseHistory) []DailyPoint {
+	type day struct{ maxW, volume float64 }
+	daily := make(map[string]day)
+	for _, d := range h.Sets {
+		date := d.Date.Time().Format("2006-01-02")
+		for _, s := range d.WorkoutSets {
+			if s.Reps > 0 && s.Weight > 0 {
+				e := daily[date]
+				if s.Weight > e.maxW {
+					e.maxW = s.Weight
+				}
+				e.volume += s.Weight * float64(s.Reps)
+				daily[date] = e
+			}
+		}
+	}
+
+	dates := make([]string, 0, len(daily))
+	for date := range daily {
+		dates = append(dates, date)
+	}
+	sort.Strings(dates)
+
+	points := make([]DailyPoint, 0, len(dates))
+	for _, date := range dates {
+		points = append(points, DailyPoint{Date: date, Weight: daily[date].maxW, Volume: daily[date].volume})
+	}
+	return points
 }

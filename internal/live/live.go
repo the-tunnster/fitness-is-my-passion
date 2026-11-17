@@ -38,12 +38,12 @@ type State struct {
 }
 
 type Manager struct {
-	client *api.Client
+	client api.Backend
 	path   string
 	mu     sync.Mutex
 }
 
-func New(client *api.Client, path string) *Manager {
+func New(client api.Backend, path string) *Manager {
 	return &Manager{client: client, path: path}
 }
 
@@ -213,7 +213,7 @@ func (m *Manager) Finish(userID string) (Result, error) {
 		if err := m.push(userID, st); err != nil {
 			return Result{}, fmt.Errorf("%w: %v", ErrNotSynced, err)
 		}
-		id, err := m.client.CreateWorkout(st.ID, userID)
+		id, err := m.client.CreateWorkout(st.ID)
 		if err != nil {
 			return Result{}, fmt.Errorf("%w: %v", ErrCreateWorkout, err)
 		}

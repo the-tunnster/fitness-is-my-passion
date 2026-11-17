@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"errors"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -58,12 +59,21 @@ func initSessionIndexes(ctx context.Context, db *mongo.Database) error {
 			Keys:    bson.D{{Key: "userID", Value: 1}},
 			Options: options.Index().SetUnique(true),
 		},
-		{
-			Keys:    bson.D{{Key: "lastUpdated", Value: 1}},
-			Options: options.Index().SetExpireAfterSeconds(60 * 60 * 48), // TTL: 48 hours
-		},
 	})
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Sessions used to expire after 48 hours through a TTL index on lastUpdated; remove it
+	// from databases that still have it.
+	if _, err := sessions.Indexes().DropOne(ctx, "lastUpdated_1"); err != nil {
+		var cmdErr mongo.CommandError
+		if errors.As(err, &cmdErr) && (cmdErr.Code == 27 || cmdErr.Code == 26) { // IndexNotFound, NamespaceNotFound
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 func initWorkoutIndexes(ctx context.Context, db *mongo.Database) error {

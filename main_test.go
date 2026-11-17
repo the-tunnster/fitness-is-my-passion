@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -8,18 +9,24 @@ import (
 	"testing"
 
 	"fitness-tracker/internal/api"
-	"fitness-tracker/internal/routes"
 	"fitness-tracker/internal/web"
 )
 
-// newMux wires the API and the UI the way main does, without needing a database.
+// noDatabase is a Backend whose calls the pages make all fail, standing in for the missing database.
+type noDatabase struct{ api.Backend }
+
+var errNoDatabase = errors.New("no database")
+
+func (noDatabase) UserID() (string, error)                   { return "", errNoDatabase }
+func (noDatabase) Me() (*api.User, error)                    { return nil, errNoDatabase }
+func (noDatabase) ExerciseList() ([]api.Exercise, error)     { return nil, errNoDatabase }
+func (noDatabase) RoutineList(string) ([]api.Routine, error) { return nil, errNoDatabase }
+
+// newMux wires the UI the way main does, without needing a database.
 func newMux(t *testing.T) *http.ServeMux {
 	t.Helper()
 	mux := http.NewServeMux()
-	routes.RegisterRoutes(mux)
-	// Unreachable on purpose: these tests never need the API to answer.
-	client := api.NewClient("http://127.0.0.1:1/api")
-	if err := web.Register(mux, client, filepath.Join(t.TempDir(), "live.json")); err != nil {
+	if err := web.Register(mux, noDatabase{}, filepath.Join(t.TempDir(), "live.json")); err != nil {
 		t.Fatal(err)
 	}
 	return mux
@@ -31,9 +38,7 @@ func do(mux *http.ServeMux, method, target string) *httptest.ResponseRecorder {
 	return rec
 }
 
-// Registering both route sets used to be impossible: the API's POST /routines/create
-// collided with the UI's /routines/create form. The API now lives under /api.
-func TestUIAndAPIRoutesDoNotCollide(t *testing.T) {
+func TestUIPagesAndStaticAssetsAreServed(t *testing.T) {
 	mux := newMux(t)
 
 	if rec := do(mux, http.MethodGet, "/routines/create"); rec.Code != http.StatusOK ||
@@ -43,21 +48,7 @@ func TestUIAndAPIRoutesDoNotCollide(t *testing.T) {
 	if rec := do(mux, http.MethodGet, "/static/style.css"); rec.Code != http.StatusOK {
 		t.Fatalf("static assets not served: %d", rec.Code)
 	}
-
-	// The API answers under /api with its own method rules...
-	rec := do(mux, http.MethodGet, "/api/routines/create")
-	if rec.Code != http.StatusMethodNotAllowed || rec.Header().Get("Allow") != "POST" {
-		t.Fatalf("API route not mounted under /api: %d allow=%q", rec.Code, rec.Header().Get("Allow"))
-	}
-	if rec := do(mux, http.MethodPost, "/api/me"); rec.Code != http.StatusMethodNotAllowed {
-		t.Fatalf("/api/me should only allow GET, got %d", rec.Code)
-	}
-	if rec := do(mux, http.MethodGet, "/api/does-not-exist"); rec.Code != http.StatusNotFound {
-		t.Fatalf("unknown API path: %d", rec.Code)
-	}
-
-	// ...and is no longer reachable at the old root paths.
-	if rec := do(mux, http.MethodGet, "/me"); rec.Code != http.StatusNotFound {
-		t.Fatalf("/me should have moved to /api/me, got %d", rec.Code)
+	if rec := do(mux, http.MethodGet, "/api/me"); rec.Code != http.StatusNotFound {
+		t.Fatalf("the JSON API is gone, /api/me should be 404, got %d", rec.Code)
 	}
 }

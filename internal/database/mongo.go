@@ -39,6 +39,10 @@ func InitMongo() {
 		log.Fatalf("Failed to initialize MongoDB indexes: %v", err)
 	}
 
+	if err := EnsureUser(ctx, MongoDatabase); err != nil {
+		log.Fatalf("Failed to ensure the default user exists: %v", err)
+	}
+
 	// Resolve Warm-Up and Cool-Down first; seed or upsert if missing
 	warmupHex, warmErr := GetExerciseID("Warm-Up")
 	cooldownHex, coolErr := GetExerciseID("Cool-Down")

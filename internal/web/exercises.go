@@ -30,7 +30,7 @@ func exerciseFromForm(r *http.Request) api.Exercise {
 	}
 }
 
-func registerExercises(mux *http.ServeMux, tpl ui.Templates, client *api.Client) {
+func registerExercises(mux *http.ServeMux, tpl ui.Templates, client api.Backend) {
 	manage := func(w http.ResponseWriter, r *http.Request, selected, success, errMsg string) {
 		data := ui.PageData{Title: "Exercise Editor", Success: success, Error: errMsg, Categories: api.ExerciseCategories}
 		list, err := client.ExerciseList()

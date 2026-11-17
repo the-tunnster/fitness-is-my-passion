@@ -1,4 +1,4 @@
-package handlers
+package service
 
 import (
 	"reflect"
@@ -31,7 +31,7 @@ func TestCompareWorkoutsKeepsLatestWorkoutOrder(t *testing.T) {
 	// Go randomises map iteration, so a map-driven order fails this within a few runs.
 	for i := 0; i < 200; i++ {
 		var got []string
-		for _, c := range compareWorkouts(latest, models.FullWorkout{}, nameOf) {
+		for _, c := range CompareWorkouts(latest, models.FullWorkout{}, nameOf) {
 			got = append(got, c.ExerciseName)
 		}
 		if !reflect.DeepEqual(got, want) {
@@ -50,7 +50,7 @@ func TestCompareWorkoutsComputesChanges(t *testing.T) {
 		exercise(2, "Flat", models.WorkoutSet{Reps: 8, Weight: 80}), // dropped since
 	}}
 
-	got := compareWorkouts(latest, previous, nameOf)
+	got := CompareWorkouts(latest, previous, nameOf)
 	if len(got) != 2 {
 		t.Fatalf("expected the two exercises of the latest workout, got %d", len(got))
 	}
