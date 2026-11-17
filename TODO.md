@@ -5,10 +5,6 @@ group is what stands between this repo and retiring the old apps.
 
 ## Before the old apps can be retired
 
-- [ ] **Run the merged server against a database and click through it.** Nothing here has
-  touched MongoDB yet: Atlas rejected this machine's TLS handshake (most likely its IP is
-  not in Atlas Network Access). Use a separate database name, e.g.
-  `MONGODB_DBNAME=fitness_app_test`, never `fitness_app`.
 - [ ] **Dockerfile and `docker-compose.yaml`** for the single binary: multi-stage build,
   `CGO_ENABLED=0`, `linux/arm64` for the Orange Pi, a volume for `SESSION_FILE`, env from
   `.env`. Untested so far (no Docker on the dev machine).

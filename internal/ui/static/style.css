@@ -268,7 +268,8 @@ hr { max-width: 46rem; margin: 1rem 0; border: 0; border-top: 1px solid var(--bo
 .set-row input:focus { outline: none; border-color: #ff4b4b; }
 .actions3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; }
 .end-cols { max-width: 46rem; align-items: start; }
-.end-cols .expander { margin-top: 0; }
+.end-cols .expander { margin-top: 0; padding: .75rem .6rem; }
+.end-cols .expander summary { white-space: nowrap; font-size: .9rem; gap: .25rem; }
 .end-cols .expander form { margin-top: 1rem; }
 .btn.primary { background: #ff4b4b; border-color: #ff4b4b; color: #fff; }
 .btn.primary:hover { filter: brightness(1.1); color: #fff; }
